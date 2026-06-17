@@ -1,0 +1,14 @@
+services:
+  opencv-hud:
+    build: .
+    container_name: opencv-sci-tech-hud-rtsp
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    environment:
+      - OPENCV_FFMPEG_CAPTURE_OPTIONS=rtsp_transport;tcp|stimeout;5000000|max_delay;500000
+    # Para webcam USB local en Linux, descomenta:
+    # devices:
+    #   - "/dev/video0:/dev/video0"

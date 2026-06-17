@@ -1,0 +1,17 @@
+[Unit]
+Description=OpenCV Sci-Tech HUD RTSP Open-Meteo
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/opencv_sci_tech_hud_rtsp_openmeteo_20260614_0227
+EnvironmentFile=/opt/opencv_sci_tech_hud_rtsp_openmeteo_20260614_0227/.env
+ExecStart=/opt/opencv_sci_tech_hud_rtsp_openmeteo_20260614_0227/.venv/bin/gunicorn -w 1 -b 0.0.0.0:5000 app:app --threads 4 --timeout 120
+Restart=always
+RestartSec=5
+User=opencv-hud
+Group=opencv-hud
+
+[Install]
+WantedBy=multi-user.target
