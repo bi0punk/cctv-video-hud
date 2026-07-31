@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "flask>=3.0",
     "opencv-python>=4.10",
-    "numpy>=2.0",
+    "numpy>=1.26.4",
     "requests>=2.32",
     "python-dotenv>=1.0",
     "gunicorn>=22.0",
