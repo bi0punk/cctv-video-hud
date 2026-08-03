@@ -2,7 +2,7 @@
 import logging
 import time
 
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request, make_response
 
 from burned_overlay import burn_hud
 from camera import CameraStream
@@ -53,6 +53,11 @@ def index():
     return render_template("index.html", station_name=settings.station_name, station_lat=settings.station_lat, station_lon=settings.station_lon, burn_default=str(settings.burn_hud_in_frame).lower())
 
 
+@app.route("/simple")
+def simple():
+    return render_template("simple.html")
+
+
 @app.route("/video_feed")
 def video_feed():
     burn = request.args.get("burn", str(settings.burn_hud_in_frame)).lower() in {"1", "true", "yes", "on"}
@@ -76,6 +81,27 @@ def api_health():
 @app.route("/api/config")
 def api_config():
     return jsonify({"station_name": settings.station_name, "station_lat": settings.station_lat, "station_lon": settings.station_lon, "timezone": settings.app_tz, "weather_ttl_seconds": settings.weather_ttl_seconds, "camera_source": settings.camera_source})
+
+
+@app.route("/api/frame")
+def api_frame():
+    burn = request.args.get("burn", str(settings.burn_hud_in_frame)).lower() in {"1", "true", "yes", "on"}
+    frame = camera.get_frame()
+    if frame is None:
+        return "", 503
+    if burn:
+        try:
+            stats = build_stats_payload(camera_fps=camera.fps_estimated)
+            frame = burn_hud(frame, stats)
+        except Exception as exc:
+            log.warning("No se pudo quemar HUD: %s", exc)
+    jpg = camera.get_jpeg(frame)
+    if jpg is None:
+        return "", 503
+    response = make_response(jpg)
+    response.headers["Content-Type"] = "image/jpeg"
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 
 if __name__ == "__main__":

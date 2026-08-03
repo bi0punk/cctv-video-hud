@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vista Simple — Transmision RTSP</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#000;width:100vw;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+    .video-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+    .video-wrap canvas{width:100%;height:100%;display:block}
+    .toolbar{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 16px;background:rgba(2,8,20,.95);border-top:1px solid rgba(0,229,255,.25)}
+    .toolbar button,.toolbar a{background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.35);color:#eefbff;padding:6px 18px;font-size:12px;cursor:pointer;font-family:Inter,system-ui,sans-serif;text-decoration:none;border-radius:2px;transition:all .2s}
+    .toolbar button:hover,.toolbar a:hover{background:rgba(0,229,255,.22);box-shadow:0 0 12px rgba(0,229,255,.18)}
+    .toolbar .label{color:rgba(0,229,255,.7);font-size:11px;font-family:Inter,system-ui,sans-serif}
+    .status-dot{width:8px;height:8px;border-radius:50%;background:var(--green,#43ff73);margin-right:6px;display:inline-block;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  </style>
+</head>
+<body>
+  <div class="video-wrap">
+    <canvas id="video" class="video-canvas"></canvas>
+  </div>
+  <div class="toolbar">
+    <span class="status-dot"></span>
+    <span class="label">Transmisión RTSP — Vista Simple</span>
+    <button onclick="toggleFullscreen()">PANTALLA COMPLETA</button>
+    <a href="/">HUD COMPLETO</a>
+  </div>
+  <script>
+    const canvasEl=document.getElementById("video");
+    const ctx=canvasEl.getContext("2d");
+    const img=new Image();
+    img.onload=()=>{
+      if(canvasEl.width!==img.naturalWidth||canvasEl.height!==img.naturalHeight){
+        canvasEl.width=img.naturalWidth;canvasEl.height=img.naturalHeight
+      }
+      ctx.drawImage(img,0,0,canvasEl.width,canvasEl.height)
+    };
+    img.onerror=()=>{ctx.fillStyle="#111";ctx.fillRect(0,0,canvasEl.width,canvasEl.height);ctx.fillStyle="#888";ctx.font="24px sans-serif";ctx.textAlign="center";ctx.fillText("SIN SEÑAL DE VIDEO",canvasEl.width/2,canvasEl.height/2)};
+    function pollFrame(){img.src="/api/frame?t="+Date.now()}
+    setInterval(pollFrame,67);
+    pollFrame();
+    function toggleFullscreen(){
+      if(!document.fullscreenElement){document.documentElement.requestFullscreen().catch(()=>{})}
+      else{document.exitFullscreen()}
+    }
+    document.getElementById("video").addEventListener("dblclick",toggleFullscreen);
+  </script>
+</body>
+</html>
