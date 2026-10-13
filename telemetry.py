@@ -14,7 +14,7 @@ class TTLCache:
     def __init__(self, ttl_seconds: int):
         self.ttl_seconds = ttl_seconds
         self._lock = threading.Lock()
-        self._data = None
+        self._data: dict | None = None
         self._ts = 0.0
 
     def get(self):
@@ -44,11 +44,26 @@ def weather_code_to_text(code) -> str:
     if code is None:
         return "SIN DATOS"
     mapping = {
-        0: "DESPEJADO", 1: "MAYORMENTE DESPEJADO", 2: "PARCIALMENTE NUBLADO", 3: "NUBLADO",
-        45: "NIEBLA", 48: "NIEBLA ESCARCHADA", 51: "LLOVIZNA LEVE", 53: "LLOVIZNA",
-        55: "LLOVIZNA INTENSA", 61: "LLUVIA LEVE", 63: "LLUVIA", 65: "LLUVIA INTENSA",
-        71: "NIEVE LEVE", 73: "NIEVE", 75: "NIEVE INTENSA", 80: "CHUBASCOS LEVES",
-        81: "CHUBASCOS", 82: "CHUBASCOS INTENSOS", 95: "TORMENTA", 96: "TORMENTA CON GRANIZO",
+        0: "DESPEJADO",
+        1: "MAYORMENTE DESPEJADO",
+        2: "PARCIALMENTE NUBLADO",
+        3: "NUBLADO",
+        45: "NIEBLA",
+        48: "NIEBLA ESCARCHADA",
+        51: "LLOVIZNA LEVE",
+        53: "LLOVIZNA",
+        55: "LLOVIZNA INTENSA",
+        61: "LLUVIA LEVE",
+        63: "LLUVIA",
+        65: "LLUVIA INTENSA",
+        71: "NIEVE LEVE",
+        73: "NIEVE",
+        75: "NIEVE INTENSA",
+        80: "CHUBASCOS LEVES",
+        81: "CHUBASCOS",
+        82: "CHUBASCOS INTENSOS",
+        95: "TORMENTA",
+        96: "TORMENTA CON GRANIZO",
         99: "TORMENTA FUERTE",
     }
     return mapping.get(int(code), f"CÓDIGO {code}")
@@ -74,7 +89,24 @@ def aqi_to_label(us_aqi) -> str:
 def wind_direction_to_cardinal(degrees) -> str:
     if degrees is None:
         return "--"
-    dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"]
+    dirs = [
+        "N",
+        "NNE",
+        "NE",
+        "ENE",
+        "E",
+        "ESE",
+        "SE",
+        "SSE",
+        "S",
+        "SSO",
+        "SO",
+        "OSO",
+        "O",
+        "ONO",
+        "NO",
+        "NNO",
+    ]
     idx = int((float(degrees) + 11.25) / 22.5) % 16
     return dirs[idx]
 
@@ -91,11 +123,22 @@ def fetch_openmeteo(lat: float, lon: float) -> dict:
     weather_params = {
         "latitude": lat,
         "longitude": lon,
-        "current": ",".join([
-            "temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation",
-            "rain", "weather_code", "cloud_cover", "pressure_msl", "surface_pressure",
-            "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m",
-        ]),
+        "current": ",".join(
+            [
+                "temperature_2m",
+                "relative_humidity_2m",
+                "apparent_temperature",
+                "precipitation",
+                "rain",
+                "weather_code",
+                "cloud_cover",
+                "pressure_msl",
+                "surface_pressure",
+                "wind_speed_10m",
+                "wind_direction_10m",
+                "wind_gusts_10m",
+            ]
+        ),
         "timezone": settings.app_tz,
         "temperature_unit": "celsius",
         "wind_speed_unit": "kmh",
@@ -104,7 +147,9 @@ def fetch_openmeteo(lat: float, lon: float) -> dict:
     air_params = {
         "latitude": lat,
         "longitude": lon,
-        "current": ",".join(["us_aqi", "pm10", "pm2_5", "carbon_monoxide", "nitrogen_dioxide", "ozone", "uv_index"]),
+        "current": ",".join(
+            ["us_aqi", "pm10", "pm2_5", "carbon_monoxide", "nitrogen_dioxide", "ozone", "uv_index"]
+        ),
         "timezone": settings.app_tz,
     }
     timeout = settings.open_meteo_timeout_seconds
@@ -151,9 +196,9 @@ def simulated_external_data() -> dict:
     t = time.time()
     return {
         "source": "simulated",
-        "temperature": round(22.0 + math.sin(t / 60) * 1.5 + random.uniform(-0.2, 0.2), 1),
+        "temperature": round(22.0 + math.sin(t / 60) * 1.5 + random.uniform(-0.2, 0.2), 1),  # nosec B311
         "apparent_temperature": round(22.4 + math.sin(t / 55) * 1.3, 1),
-        "humidity": round(63 + math.sin(t / 80) * 8 + random.uniform(-1, 1), 1),
+        "humidity": round(63 + math.sin(t / 80) * 8 + random.uniform(-1, 1), 1),  # nosec B311
         "pressure": round(1012 + math.sin(t / 120) * 3, 0),
         "pressure_msl": round(1015 + math.sin(t / 120) * 3, 0),
         "precipitation": 0,
@@ -197,28 +242,52 @@ def get_weather_data(lat: float, lon: float) -> tuple[dict, str]:
         raise
 
 
-def build_stats_payload(camera_fps: float, lat: float | None = None, lon: float | None = None) -> dict:
+def build_stats_payload(
+    camera_fps: float, lat: float | None = None, lon: float | None = None
+) -> dict:
     lat = settings.station_lat if lat is None else lat
     lon = settings.station_lon if lon is None else lon
     now = datetime.now(ZoneInfo(settings.app_tz))
     weather, mode = get_weather_data(lat, lon)
-    signal = round(96 + random.uniform(-2, 2), 0)
-    latency = round(28 + random.uniform(-6, 8), 0)
-    cpu = round(34 + random.uniform(-8, 8), 0)
+    signal = round(96 + random.uniform(-2, 2), 0)  # nosec B311
+    latency = round(28 + random.uniform(-6, 8), 0)  # nosec B311
+    cpu = round(34 + random.uniform(-8, 8), 0)  # nosec B311
     status = "EN LÍNEA" if mode in {"live", "cache"} else "DEGRADADO"
     return {
-        "date": now.strftime("%d %b %Y").upper(), "time": now.strftime("%H:%M:%S"), "timestamp_iso": now.isoformat(),
-        "location": settings.station_name, "latitude": lat, "longitude": lon, "status": status,
-        "telemetry_mode": mode, "cache_age_seconds": round(_weather_cache.age_seconds(), 1),
-        "humidity": weather.get("humidity"), "temperature": weather.get("temperature"),
-        "apparent_temperature": weather.get("apparent_temperature"), "pressure": weather.get("pressure"),
-        "pressure_msl": weather.get("pressure_msl"), "weather": weather.get("weather"),
-        "weather_code": weather.get("weather_code"), "cloud_cover": weather.get("cloud_cover"),
-        "precipitation": weather.get("precipitation"), "rain": weather.get("rain"),
-        "wind": weather.get("wind"), "wind_speed": weather.get("wind_speed"),
-        "wind_direction": weather.get("wind_direction"), "wind_gusts": weather.get("wind_gusts"),
-        "air_quality": weather.get("air_quality"), "us_aqi": weather.get("us_aqi"),
-        "pm10": weather.get("pm10"), "pm2_5": weather.get("pm2_5"), "co": weather.get("co"),
-        "no2": weather.get("no2"), "ozone": weather.get("ozone"), "uv_index": weather.get("uv_index"),
-        "signal": signal, "fps": round(camera_fps, 1), "cpu": cpu, "latency": latency, "stream_state": "OK",
+        "date": now.strftime("%d %b %Y").upper(),
+        "time": now.strftime("%H:%M:%S"),
+        "timestamp_iso": now.isoformat(),
+        "location": settings.station_name,
+        "latitude": lat,
+        "longitude": lon,
+        "status": status,
+        "telemetry_mode": mode,
+        "cache_age_seconds": round(_weather_cache.age_seconds(), 1),
+        "humidity": weather.get("humidity"),
+        "temperature": weather.get("temperature"),
+        "apparent_temperature": weather.get("apparent_temperature"),
+        "pressure": weather.get("pressure"),
+        "pressure_msl": weather.get("pressure_msl"),
+        "weather": weather.get("weather"),
+        "weather_code": weather.get("weather_code"),
+        "cloud_cover": weather.get("cloud_cover"),
+        "precipitation": weather.get("precipitation"),
+        "rain": weather.get("rain"),
+        "wind": weather.get("wind"),
+        "wind_speed": weather.get("wind_speed"),
+        "wind_direction": weather.get("wind_direction"),
+        "wind_gusts": weather.get("wind_gusts"),
+        "air_quality": weather.get("air_quality"),
+        "us_aqi": weather.get("us_aqi"),
+        "pm10": weather.get("pm10"),
+        "pm2_5": weather.get("pm2_5"),
+        "co": weather.get("co"),
+        "no2": weather.get("no2"),
+        "ozone": weather.get("ozone"),
+        "uv_index": weather.get("uv_index"),
+        "signal": signal,
+        "fps": round(camera_fps, 1),
+        "cpu": cpu,
+        "latency": latency,
+        "stream_state": "OK",
     }

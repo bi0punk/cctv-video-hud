@@ -2,7 +2,7 @@
 import logging
 import time
 
-from flask import Flask, Response, jsonify, render_template, request, make_response
+from flask import Flask, Response, jsonify, make_response, render_template, request
 
 from burned_overlay import burn_hud
 from camera import CameraStream
@@ -45,12 +45,22 @@ def generate_mjpeg(burn: bool = False):
         if jpg is None:
             time.sleep(0.05)
             continue
-        yield b"--frame\r\nContent-Type: image/jpeg\r\nCache-Control: no-cache\r\n\r\n" + jpg + b"\r\n"
+        yield (
+            b"--frame\r\nContent-Type: image/jpeg\r\nCache-Control: no-cache\r\n\r\n"
+            + jpg
+            + b"\r\n"
+        )
 
 
 @app.route("/")
 def index():
-    return render_template("index.html", station_name=settings.station_name, station_lat=settings.station_lat, station_lon=settings.station_lon, burn_default=str(settings.burn_hud_in_frame).lower())
+    return render_template(
+        "index.html",
+        station_name=settings.station_name,
+        station_lat=settings.station_lat,
+        station_lon=settings.station_lon,
+        burn_default=str(settings.burn_hud_in_frame).lower(),
+    )
 
 
 @app.route("/simple")
@@ -60,7 +70,12 @@ def simple():
 
 @app.route("/video_feed")
 def video_feed():
-    burn = request.args.get("burn", str(settings.burn_hud_in_frame)).lower() in {"1", "true", "yes", "on"}
+    burn = request.args.get("burn", str(settings.burn_hud_in_frame)).lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     return Response(generate_mjpeg(burn=burn), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 
@@ -75,17 +90,41 @@ def api_stats():
 
 @app.route("/api/health")
 def api_health():
-    return jsonify({"ok": True, "camera": camera.health(), "station_name": settings.station_name, "station_lat": settings.station_lat, "station_lon": settings.station_lon, "weather_enabled": settings.weather_enabled, "burn_hud_in_frame": settings.burn_hud_in_frame})
+    return jsonify(
+        {
+            "ok": True,
+            "camera": camera.health(),
+            "station_name": settings.station_name,
+            "station_lat": settings.station_lat,
+            "station_lon": settings.station_lon,
+            "weather_enabled": settings.weather_enabled,
+            "burn_hud_in_frame": settings.burn_hud_in_frame,
+        }
+    )
 
 
 @app.route("/api/config")
 def api_config():
-    return jsonify({"station_name": settings.station_name, "station_lat": settings.station_lat, "station_lon": settings.station_lon, "timezone": settings.app_tz, "weather_ttl_seconds": settings.weather_ttl_seconds, "camera_source": settings.camera_source})
+    return jsonify(
+        {
+            "station_name": settings.station_name,
+            "station_lat": settings.station_lat,
+            "station_lon": settings.station_lon,
+            "timezone": settings.app_tz,
+            "weather_ttl_seconds": settings.weather_ttl_seconds,
+            "camera_source": settings.camera_source,
+        }
+    )
 
 
 @app.route("/api/frame")
 def api_frame():
-    burn = request.args.get("burn", str(settings.burn_hud_in_frame)).lower() in {"1", "true", "yes", "on"}
+    burn = request.args.get("burn", str(settings.burn_hud_in_frame)).lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     frame = camera.get_frame()
     if frame is None:
         return "", 503
@@ -108,6 +147,8 @@ if __name__ == "__main__":
     log.info("Iniciando OpenCV HUD en %s:%s", settings.app_host, settings.app_port)
     log.info("Camera source: %s", settings.camera_source)
     try:
-        app.run(host=settings.app_host, port=settings.app_port, debug=settings.app_debug, threaded=True)
+        app.run(
+            host=settings.app_host, port=settings.app_port, debug=settings.app_debug, threaded=True
+        )
     finally:
         camera.stop()

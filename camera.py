@@ -1,8 +1,8 @@
+import contextlib
 import math
 import os
 import threading
 import time
-from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -14,9 +14,9 @@ class CameraStream:
     def __init__(self, source: str):
         self.raw_source = str(source)
         self.demo_mode = self.raw_source.lower() == "demo"
-        self.source: Union[int, str] = int(source) if str(source).isdigit() else source
+        self.source: int | str = int(source) if str(source).isdigit() else source
         self.cap = None
-        self.frame: Optional[np.ndarray] = None
+        self.frame: np.ndarray | None = None
         self.lock = threading.Lock()
         self.running = False
         self.fps_estimated = 0.0
@@ -33,19 +33,15 @@ class CameraStream:
             return None
         ffmpeg_opts = os.getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS")
         if ffmpeg_opts:
-            try:
+            with contextlib.suppress(Exception):
                 cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG)
                 cap.set(cv2.CAP_PROP_OPENCV_FFMPEG_CAPTURE_OPTIONS, ffmpeg_opts)
-            except Exception:
-                pass
         else:
             cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, settings.frame_width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, settings.frame_height)
-        try:
+        with contextlib.suppress(Exception):
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
-        except Exception:
-            pass
         return cap
 
     def _reader(self):
@@ -66,10 +62,8 @@ class CameraStream:
                 ok, frame = self.cap.read()
                 if not ok or frame is None:
                     self.last_error = "No se pudo leer frame RTSP. Reabriendo cámara."
-                    try:
+                    with contextlib.suppress(Exception):
                         self.cap.release()
-                    except Exception:
-                        pass
                     self.cap = None
                     time.sleep(1)
                     continue
@@ -97,22 +91,42 @@ class CameraStream:
         cy = int(h / 2 + math.cos(t / 2.7) * 80)
         cv2.circle(frame, (cx, cy), 90, (40, 120, 160), -1)
         cv2.circle(frame, (cx, cy), 94, (0, 220, 255), 2)
-        cv2.putText(frame, "DEMO VIDEO SOURCE", (int(w * 0.36), int(h * 0.50)), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (230, 250, 255), 2, cv2.LINE_AA)
-        cv2.putText(frame, "Edit .env CAMERA_SOURCE=rtsp://user:pass@ip:554/...", (int(w * 0.25), int(h * 0.56)), cv2.FONT_HERSHEY_SIMPLEX, 0.72, (80, 220, 255), 2, cv2.LINE_AA)
+        cv2.putText(
+            frame,
+            "DEMO VIDEO SOURCE",
+            (int(w * 0.36), int(h * 0.50)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.1,
+            (230, 250, 255),
+            2,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            frame,
+            "Edit .env CAMERA_SOURCE=rtsp://user:pass@ip:554/...",
+            (int(w * 0.25), int(h * 0.56)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.72,
+            (80, 220, 255),
+            2,
+            cv2.LINE_AA,
+        )
         return frame
 
-    def get_frame(self) -> Optional[np.ndarray]:
+    def get_frame(self) -> np.ndarray | None:
         with self.lock:
             if self.frame is None:
                 return None
             return self.frame.copy()
 
-    def get_jpeg(self, frame: Optional[np.ndarray] = None) -> Optional[bytes]:
+    def get_jpeg(self, frame: np.ndarray | None = None) -> bytes | None:
         if frame is None:
             frame = self.get_frame()
         if frame is None:
             return None
-        ok, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), settings.jpeg_quality])
+        ok, buffer = cv2.imencode(
+            ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), settings.jpeg_quality]
+        )
         if not ok:
             return None
         return buffer.tobytes()
@@ -131,7 +145,5 @@ class CameraStream:
     def stop(self):
         self.running = False
         if self.cap is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self.cap.release()
-            except Exception:
-                pass

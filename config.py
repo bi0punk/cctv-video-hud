@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,7 +15,7 @@ def bool_env(name: str, default: bool = False) -> bool:
 
 @dataclass(frozen=True)
 class Settings:
-    app_host: str = os.getenv("APP_HOST", "0.0.0.0")
+    app_host: str = os.getenv("APP_HOST", "0.0.0.0")  # nosec B104
     app_port: int = int(os.getenv("APP_PORT", "5000"))
     app_tz: str = os.getenv("APP_TZ", "America/Santiago")
     app_debug: bool = bool_env("APP_DEBUG", False)
